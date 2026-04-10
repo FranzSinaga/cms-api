@@ -10,4 +10,4 @@ migrate-force:
 	migrate -path db/migrations -database "$(DB_URL)" force $(version)
 
 run:
-	go run cmd/api/main.go
+	go run cmd/api/*.go

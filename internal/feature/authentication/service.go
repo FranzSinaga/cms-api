@@ -6,20 +6,19 @@ import (
 	"time"
 
 	"github.com/FranzSinaga/blogcms/internal/domain"
-	"github.com/FranzSinaga/blogcms/internal/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-	userRepo *repository.UserRepository
+type Service struct {
+	userRepo *Repository
 }
 
-func NewAuthService(userRepo *repository.UserRepository) *AuthService {
-	return &AuthService{userRepo: userRepo}
+func NewAuthService(userRepo *Repository) *Service {
+	return &Service{userRepo: userRepo}
 }
 
-func (s *AuthService) Register(req *domain.RegisterRequest) error {
+func (s *Service) Register(req *domain.RegisterRequest) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -35,7 +34,7 @@ func (s *AuthService) Register(req *domain.RegisterRequest) error {
 	return s.userRepo.CreateUser(user)
 }
 
-func (s *AuthService) Login(req *domain.LoginRequest) (string, *domain.UserResponse, error) {
+func (s *Service) Login(req *domain.LoginRequest) (string, *domain.UserResponse, error) {
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		return "", nil, errors.New("email atau password salah")

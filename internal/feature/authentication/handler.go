@@ -6,37 +6,34 @@ import (
 	"time"
 
 	"github.com/FranzSinaga/blogcms/internal/domain"
-	"github.com/FranzSinaga/blogcms/internal/service"
 	"github.com/FranzSinaga/blogcms/internal/shared"
 )
 
-type AuthHandler struct {
-	authService *service.AuthService
+type Handler struct {
+	authService *Service
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *Service) *Handler {
+	return &Handler{authService: authService}
 }
 
-func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		shared.WriteError(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.authService.Register(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		shared.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Registrasi Berhasil",
-	})
+	shared.WriteSuccess(w, "Berhasil mendaftarkan pengguna baru", req)
 }
 
-func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		shared.WriteError(w, "Invalid Request Body", http.StatusBadRequest)
