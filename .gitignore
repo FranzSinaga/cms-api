@@ -1,0 +1,30 @@
+# Binary
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Go
+*.test
+*.out
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Migration (jangan ignore, ini perlu di commit)
+# db/migrations/
