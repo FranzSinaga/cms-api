@@ -19,7 +19,7 @@ type ResponseSuccess struct {
 }
 
 func WriteError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "appplication/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(ResponseError{
 		Error:      true,

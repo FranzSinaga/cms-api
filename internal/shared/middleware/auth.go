@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/FranzSinaga/blogcms/internal/shared"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -20,35 +22,58 @@ type UserClaim struct {
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 1. Baca Cookie
+		// Read cookie
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			shared.WriteError(w, "Unauthorized: missing authentication token", http.StatusUnauthorized)
 			return
 		}
 
-		// 2. Validasi JWT
+		// Validate JWT
 		token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
+			// Validate signing method
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized: invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 
-		// 3. Extract claim
+		// Extract claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
 			return
 		}
 
-		// 4. simpan ke context
+		// Safely extract user information from claims
+		userID, ok := claims["user_id"].(string)
+		if !ok {
+			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		email, ok := claims["email"].(string)
+		if !ok {
+			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		role, ok := claims["role"].(string)
+		if !ok {
+			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		// Store user claims in context
 		userClaims := &UserClaim{
-			UserID: claims["user_id"].(string),
-			Email:  claims["email"].(string),
-			Role:   claims["role"].(string),
+			UserID: userID,
+			Email:  email,
+			Role:   role,
 		}
 
 		ctx := context.WithValue(r.Context(), UserContextKey, userClaims)

@@ -5,11 +5,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// RepositoryInterface defines the methods for user repository
+type RepositoryInterface interface {
+	CreateUser(user *domain.User) error
+	FindByEmail(email string) (*domain.User, error)
+}
+
 type Repository struct {
 	db *sqlx.DB
 }
 
-func NewUserRepository(db *sqlx.DB) *Repository {
+func NewUserRepository(db *sqlx.DB) RepositoryInterface {
 	return &Repository{db: db}
 }
 

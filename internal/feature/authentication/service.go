@@ -2,20 +2,24 @@ package authentication
 
 import (
 	"errors"
-	"os"
 	"time"
 
 	"github.com/FranzSinaga/blogcms/internal/domain"
+	"github.com/FranzSinaga/blogcms/pkg/config"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
-	userRepo *Repository
+	userRepo  RepositoryInterface
+	jwtConfig config.JWTConfig
 }
 
-func NewAuthService(userRepo *Repository) *Service {
-	return &Service{userRepo: userRepo}
+func NewAuthService(userRepo RepositoryInterface, jwtConfig config.JWTConfig) *Service {
+	return &Service{
+		userRepo:  userRepo,
+		jwtConfig: jwtConfig,
+	}
 }
 
 func (s *Service) Register(req *domain.RegisterRequest) error {
@@ -37,21 +41,21 @@ func (s *Service) Register(req *domain.RegisterRequest) error {
 func (s *Service) Login(req *domain.LoginRequest) (string, *domain.UserResponse, error) {
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
-		return "", nil, errors.New("email atau password salah")
+		return "", nil, errors.New("invalid email or password")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		return "", nil, errors.New("email atau password salah")
+		return "", nil, errors.New("invalid email or password")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"email":   user.Email,
 		"role":    user.Role,
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		"exp":     time.Now().Add(s.jwtConfig.ExpiresIn).Unix(),
 	})
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := token.SignedString([]byte(s.jwtConfig.Secret))
 
 	if err != nil {
 		return "", nil, err

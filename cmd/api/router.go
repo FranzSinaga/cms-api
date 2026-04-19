@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/FranzSinaga/blogcms/internal/shared"
 	appMiddleware "github.com/FranzSinaga/blogcms/internal/shared/middleware"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -32,7 +33,11 @@ func setupRouter(c *Container) *chi.Mux {
 
 		r.Get("/protected-test", func(w http.ResponseWriter, r *http.Request) {
 			user := r.Context().Value(appMiddleware.UserContextKey).(*appMiddleware.UserClaim)
-			fmt.Fprintf(w, "Halo %s, kamu berhasil masuk protected route!", user.Email)
+			fmt.Fprintf(w, "Hello %s, you have successfully accessed the protected route!", user.Email)
+		})
+
+		r.Get("/check-login", func(w http.ResponseWriter, r *http.Request) {
+			shared.WriteSuccess(w, "User is logged in", true)
 		})
 	})
 	return r
