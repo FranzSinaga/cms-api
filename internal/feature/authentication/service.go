@@ -22,20 +22,30 @@ func NewAuthService(userRepo RepositoryInterface, jwtConfig config.JWTConfig) *S
 	}
 }
 
-func (s *Service) Register(req *domain.RegisterRequest) error {
+func (s *Service) Register(req *domain.RegisterRequest) (string, *domain.UserResponse, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 
 	user := &domain.User{
 		Email:    req.Email,
 		Password: string(hashedPassword),
 		Name:     req.Name,
-		Role:     "admin",
+		Role:     "user",
 	}
 
-	return s.userRepo.CreateUser(user)
+	if err := s.userRepo.CreateUser(user); err != nil {
+		return "", nil, err
+	}
+
+	tokenString, err := s.generateToken(user)
+	return tokenString, &domain.UserResponse{
+		Email:     user.Email,
+		Name:      user.Name,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	}, nil
 }
 
 func (s *Service) Login(req *domain.LoginRequest) (string, *domain.UserResponse, error) {
@@ -49,14 +59,7 @@ func (s *Service) Login(req *domain.LoginRequest) (string, *domain.UserResponse,
 		return "", nil, errors.New("invalid email or password")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"role":    user.Role,
-		"exp":     time.Now().Add(s.jwtConfig.ExpiresIn).Unix(),
-	})
-	tokenString, err := token.SignedString([]byte(s.jwtConfig.Secret))
-
+	tokenString, err := s.generateToken(user)
 	if err != nil {
 		return "", nil, err
 	}
@@ -67,4 +70,16 @@ func (s *Service) Login(req *domain.LoginRequest) (string, *domain.UserResponse,
 		Role:      user.Role,
 		CreatedAt: user.CreatedAt,
 	}, nil
+}
+
+func (s *Service) generateToken(user *domain.User) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"email":   user.Email,
+		"role":    user.Role,
+		"exp":     time.Now().Add(s.jwtConfig.ExpiresIn).Unix(),
+		"iat":     time.Now().Unix(),
+		"iss":     "cms-api",
+	})
+	return token.SignedString([]byte(s.jwtConfig.Secret))
 }

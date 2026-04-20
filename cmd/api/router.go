@@ -8,37 +8,43 @@ import (
 	appMiddleware "github.com/FranzSinaga/blogcms/internal/shared/middleware"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/rs/cors"
 )
 
-func setupRouter(c *Container) *chi.Mux {
+func setupRouter(c *Container) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "api-cms is running")
-	})
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "OK")
+	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		shared.WriteSuccess(w, "Api is healthy", "API is healthy")
 	})
 
 	// Public Routes
-	r.Route("/auth", c.AuthHandler.Routes())
+	r.Route("/api/auth", c.AuthHandler.Routes())
 
 	// Protected Routes
 	r.Group(func(r chi.Router) {
 		r.Use(appMiddleware.AuthMiddleware)
 
-		r.Get("/protected-test", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/api/protected-test", func(w http.ResponseWriter, r *http.Request) {
 			user := r.Context().Value(appMiddleware.UserContextKey).(*appMiddleware.UserClaim)
-			fmt.Fprintf(w, "Hello %s, you have successfully accessed the protected route!", user.Email)
+			shared.WriteSuccess(w, "Successfully accessed the protected route", fmt.Sprintf("Hello %s, you have successfully accessed the protected route!", user.Email))
 		})
 
-		r.Get("/check-login", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/api/check-login", func(w http.ResponseWriter, r *http.Request) {
 			shared.WriteSuccess(w, "User is logged in", true)
 		})
 	})
-	return r
+
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+		Debug:            false,
+	})
+
+	return corsHandler.Handler(r)
 }

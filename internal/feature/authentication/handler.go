@@ -25,6 +25,8 @@ func NewAuthHandler(authService *Service, appConfig config.AppConfig, jwtConfig 
 }
 
 func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	var req domain.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		shared.WriteError(w, "Invalid request body", http.StatusBadRequest)
@@ -35,28 +37,37 @@ func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err := validator.Validate(&req); err != nil {
 		validationErrors := validator.GetValidationErrors(err)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   true,
-			"message": "Validation failed",
-			"errors":  validationErrors,
-		})
+		shared.WriteValidationError(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
-	if err := h.authService.Register(&req); err != nil {
+	tokenString, _, err := h.authService.Register(&req)
+	if err != nil {
 		shared.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		HttpOnly: true,
+		Secure:   h.appConfig.Env == "production",
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+		MaxAge:   int(h.jwtConfig.ExpiresIn.Seconds()),
+	})
+
+	w.Header().Set("Content-Type", "application/json")
 	shared.WriteSuccess(w, "User registered successfully", map[string]string{
 		"email": req.Email,
 		"name":  req.Name,
+		"token": tokenString,
 	})
 }
 
 func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	var req domain.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		shared.WriteError(w, "Invalid request body", http.StatusBadRequest)
@@ -67,12 +78,7 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if err := validator.Validate(&req); err != nil {
 		validationErrors := validator.GetValidationErrors(err)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   true,
-			"message": "Validation failed",
-			"errors":  validationErrors,
-		})
+		shared.WriteValidationError(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
