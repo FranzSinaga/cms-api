@@ -24,7 +24,7 @@ func NewAuthHandler(authService *Service, appConfig config.AppConfig, jwtConfig 
 	}
 }
 
-func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var req domain.RegisterRequest
@@ -41,31 +41,23 @@ func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, _, err := h.authService.Register(&req)
+	token, _, err := h.authService.Register(&req)
 	if err != nil {
 		shared.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    tokenString,
-		HttpOnly: true,
-		Secure:   h.appConfig.Env == "production",
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-		MaxAge:   int(h.jwtConfig.ExpiresIn.Seconds()),
-	})
+	shared.SetAuthCookie(w, token, h.jwtConfig.ExpiresIn, h.appConfig.Env == "production")
 
 	w.Header().Set("Content-Type", "application/json")
 	shared.WriteSuccess(w, "User registered successfully", map[string]string{
 		"email": req.Email,
 		"name":  req.Name,
-		"token": tokenString,
+		"token": token,
 	})
 }
 
-func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var req domain.LoginRequest
@@ -89,19 +81,15 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set secure cookie based on environment
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    token,
-		HttpOnly: true,
-		Secure:   h.appConfig.Env == "production",
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-		MaxAge:   int(h.jwtConfig.ExpiresIn.Seconds()),
-	})
+	shared.SetAuthCookie(w, token, h.jwtConfig.ExpiresIn, h.appConfig.Env == "production")
 
 	w.Header().Set("Content-Type", "application/json")
 	shared.WriteSuccess(w, "Login successful", domain.LoginResponse{
 		Token: token,
 		User:  userResponse,
 	})
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	shared.ClearAuthCookie(w, h.appConfig.Env == "production")
 }

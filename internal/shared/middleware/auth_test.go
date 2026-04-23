@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FranzSinaga/blogcms/internal/shared"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := r.Context().Value(UserContextKey).(*UserClaim)
+		user := r.Context().Value(shared.UserContextKey).(*UserClaim)
 		assert.Equal(t, "user-123", user.UserID)
 		assert.Equal(t, "test@example.com", user.Email)
 		assert.Equal(t, "admin", user.Role)
@@ -41,7 +42,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	// Create request with cookie
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
+		Name:  shared.AuthTokenCookieName,
 		Value: tokenString,
 	})
 	rr := httptest.NewRecorder()
@@ -90,7 +91,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	// Create request with invalid token
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
+		Name:  shared.AuthTokenCookieName,
 		Value: "invalid.token.here",
 	})
 	rr := httptest.NewRecorder()
@@ -127,7 +128,7 @@ func TestAuthMiddleware_ExpiredToken(t *testing.T) {
 	// Create request with expired token
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
+		Name:  shared.AuthTokenCookieName,
 		Value: tokenString,
 	})
 	rr := httptest.NewRecorder()
@@ -163,7 +164,7 @@ func TestAuthMiddleware_MalformedClaims(t *testing.T) {
 	// Create request with malformed token
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
+		Name:  shared.AuthTokenCookieName,
 		Value: tokenString,
 	})
 	rr := httptest.NewRecorder()
@@ -200,7 +201,7 @@ func TestAuthMiddleware_WrongClaimTypes(t *testing.T) {
 	// Create request with wrong claim types
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
+		Name:  shared.AuthTokenCookieName,
 		Value: tokenString,
 	})
 	rr := httptest.NewRecorder()

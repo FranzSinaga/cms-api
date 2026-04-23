@@ -10,20 +10,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type contextKey string
-
-const UserContextKey contextKey = "user"
-
 type UserClaim struct {
 	UserID string
 	Email  string
 	Role   string
+	Name   string
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Read cookie
-		cookie, err := r.Cookie("auth_token")
+		cookie, err := r.Cookie(shared.AuthTokenCookieName)
 		if err != nil {
 			shared.WriteError(w, "Unauthorized: missing authentication token", http.StatusUnauthorized)
 			return
@@ -63,6 +60,12 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		name, ok := claims["name"].(string)
+		if !ok {
+			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
 		role, ok := claims["role"].(string)
 		if !ok {
 			http.Error(w, "Unauthorized: invalid token claims", http.StatusUnauthorized)
@@ -74,9 +77,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			UserID: userID,
 			Email:  email,
 			Role:   role,
+			Name:   name,
 		}
 
-		ctx := context.WithValue(r.Context(), UserContextKey, userClaims)
+		ctx := context.WithValue(r.Context(), shared.UserContextKey, userClaims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

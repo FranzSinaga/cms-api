@@ -77,6 +77,7 @@ func (s *Service) generateToken(user *domain.User) (string, error) {
 		"user_id": user.ID,
 		"email":   user.Email,
 		"role":    user.Role,
+		"name":    user.Name,
 		"exp":     time.Now().Add(s.jwtConfig.ExpiresIn).Unix(),
 		"iat":     time.Now().Unix(),
 		"iss":     "cms-api",
