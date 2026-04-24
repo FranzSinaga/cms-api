@@ -10,13 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type UserClaim struct {
-	UserID string
-	Email  string
-	Role   string
-	Name   string
-}
-
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Read cookie
@@ -73,7 +66,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Store user claims in context
-		userClaims := &UserClaim{
+		userClaims := &shared.UserClaim{
 			UserID: userID,
 			Email:  email,
 			Role:   role,

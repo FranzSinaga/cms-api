@@ -6,15 +6,20 @@ import (
 
 	"github.com/FranzSinaga/blogcms/internal/shared"
 	appMiddleware "github.com/FranzSinaga/blogcms/internal/shared/middleware"
+	"github.com/FranzSinaga/blogcms/pkg/config"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 )
 
-func setupRouter(c *Container) http.Handler {
+func setupRouter(c *Container, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(chiMiddleware.Logger)
+	if cfg.App.Env == "production" {
+		r.Use(appMiddleware.LoggingMiddleware)
+	} else {
+		r.Use(chiMiddleware.Logger)
+	}
 	r.Use(chiMiddleware.Recoverer)
 
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +41,8 @@ func setupRouter(c *Container) http.Handler {
 		r.Get("/api/check-login", func(w http.ResponseWriter, r *http.Request) {
 			shared.WriteSuccess(w, "User is logged in", true)
 		})
+
+		r.Route("/api/posts", c.PostHandler.Routes())
 	})
 
 	corsHandler := cors.New(cors.Options{
