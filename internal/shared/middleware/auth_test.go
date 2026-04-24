@@ -28,7 +28,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := r.Context().Value(shared.UserContextKey).(*UserClaim)
+		user := r.Context().Value(shared.UserContextKey).(*shared.UserClaim)
 		assert.Equal(t, "user-123", user.UserID)
 		assert.Equal(t, "test@example.com", user.Email)
 		assert.Equal(t, "admin", user.Role)

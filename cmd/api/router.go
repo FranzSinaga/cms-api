@@ -29,7 +29,7 @@ func setupRouter(c *Container) http.Handler {
 		r.Use(appMiddleware.AuthMiddleware)
 
 		r.Get("/api/protected-test", func(w http.ResponseWriter, r *http.Request) {
-			user := r.Context().Value(shared.UserContextKey).(*appMiddleware.UserClaim)
+			user := shared.GetUserFromContext(r)
 			shared.WriteSuccess(w, "Successfully accessed the protected route", fmt.Sprintf("Hello %s, you have successfully accessed the protected route!", user.Name))
 		})
 
